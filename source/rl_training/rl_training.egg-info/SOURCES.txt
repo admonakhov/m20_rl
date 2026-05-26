@@ -1,6 +1,7 @@
 pyproject.toml
 setup.py
 rl_training/__init__.py
+rl_training/export_deploy_cfg.py
 rl_training/ui_extension_example.py
 rl_training.egg-info/PKG-INFO
 rl_training.egg-info/SOURCES.txt

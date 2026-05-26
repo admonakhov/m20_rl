@@ -94,6 +94,7 @@ from isaaclab.envs import (
     DirectMARLEnv,
     DirectMARLEnvCfg,
     DirectRLEnvCfg,
+    ManagerBasedRLEnv,
     ManagerBasedRLEnvCfg,
     multi_agent_to_single_agent,
 )
@@ -104,6 +105,7 @@ from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 import rl_training.tasks  # noqa: F401
+from rl_training.export_deploy_cfg import export_deploy_cfg
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -192,6 +194,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # dump the configuration into log-directory
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
+    base_env = env.unwrapped
+    if isinstance(base_env, ManagerBasedRLEnv):
+        export_deploy_cfg(base_env, log_dir)
+    else:
+        print(f"[INFO] Skipping deploy config export for unsupported env type: {type(base_env).__name__}")
     
     # run training
     runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
