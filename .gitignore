@@ -1,0 +1,13 @@
+build/
+install/
+log/
+.vscode/
+
+tmp/
+.codex
+**/__pycache__/
+**/build*/
+**/logs/*
+**/runs/*
+**/*.pyc
+**/*.codex
