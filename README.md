@@ -1,202 +1,291 @@
-# rl_training
+# M20 RL Training and Deploy
 
-[![IsaacSim](https://img.shields.io/badge/IsaacSim-5.1.0-silver.svg)](https://docs.omniverse.nvidia.com/isaacsim/latest/overview.html)
-[![Isaac Lab](https://img.shields.io/badge/IsaacLab-2.3.2-silver)](https://isaac-sim.github.io/IsaacLab)
-[![RSL-RL](https://img.shields.io/badge/RSL--RL-5.0.1-silver)](https://github.com/leggedrobotics/rsl_rl)
-[![Discord](https://img.shields.io/badge/-Discord-5865F2?style=flat&logo=Discord&logoColor=white)](https://discord.gg/gdM9mQutC8)
-[![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://docs.python.org/3/whatsnew/3.11.html)
-[![Linux platform](https://img.shields.io/badge/platform-linux--64-orange.svg)](https://releases.ubuntu.com/22.04/)
-[![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg)](https://opensource.org/license/bsd-3-clause)
+This repository is an M20-focused reinforcement learning workspace built on Isaac Lab. It contains:
 
-## Tutorial Videos
-We've released the following tutorials for training and deploying a reinforcement learning policy. Please check it out on [Bilibili](https://b23.tv/UoIqsFn) or [YouTube](https://youtube.com/playlist?list=PLy9YHJvMnjO0X4tx_NTWugTUMJXUrOgFH&si=pjUGF5PbFf3tGLFz)! 
+- M20 locomotion tasks for flat, rough, and wheelie training
+- RSL-RL training and playback scripts
+- ONNX export utilities
+- `sdk_deploy` for ROS 2 based sim-to-sim and sim-to-real deployment
 
-## Overview
+The repo is tailored to the current M20 implementation in this workspace rather than the original multi-robot upstream layout.
 
-**rl_training** is a RL training library for deeprobotics robots, based on IsaacLab. The table below lists all available environments:
+## What Is Here
 
-| Robot Model         | Environment Name (ID)                                      | Screenshot |
-|---------------------|------------------------------------------------------------|------------|
-| [Deeprobotics Lite3](https://www.deeprobotics.cn/robot/index/product1.html) | Rough-Deeprobotics-Lite3-v0 | <img src="./docs/imgs/deeprobotics_lite3.png" alt="Lite3" width="300">
-| [Deeprobotics M20](https://www.deeprobotics.cn/robot/index/lynx.html) | Rough-Deeprobotics-M20-v0 | <img src="./docs/imgs/deeprobotics_m20.png" alt="deeprobotics_m20" width="300">
+- `source/rl_training`
+  M20 environment configs, rewards, commands, and deploy config export.
+- `scripts/rsl_rl/train.py`
+  Main training entrypoint.
+- `scripts/rsl_rl/play.py`
+  Checkpoint playback in Isaac Sim and export of `policy.onnx` / `policy.pt`.
+- `scripts/tools/export_onnx_fast.py`
+  Fast ONNX export from a `.pt` checkpoint without Isaac Sim.
+- `sdk_deploy`
+  ROS 2 workspace for `m20_sdk_deploy`, `drdds`, and MuJoCo ROS bridge.
+- `simulate.sh`
+  Starts the MuJoCo ROS 2 simulator side.
+- `deploy.sh`
+  Starts the M20 SDK deploy node.
 
-> [!NOTE]
-> If you want to deploy policies in mujoco or real robots, please use the corresponding deploy repo in [Deep Robotics Github Center](https://github.com/DeepRoboticsLab).
-## Contribution 
+## Requirements
 
-Everyone is welcome to contribute to this repo. If you discover a bug or optimize our training config, just submit a pull request and we will look into it.
+- Ubuntu 22.04
+- Isaac Sim / Isaac Lab installed and working
+- Python environment with Isaac Lab and `rsl-rl-lib`
+- ROS 2 Humble for `sdk_deploy`
+- `mujoco` and `numpy < 2.0` for MuJoCo sim-to-sim
+
 ## Installation
 
-- Install Isaac Lab by following the [installation guide](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html). We recommend using the conda installation as it simplifies calling Python scripts from the terminal.
-
-- Clone this repository separately from the Isaac Lab installation (i.e. outside the `IsaacLab` directory):
-
-  ```bash
-  git clone --recurse-submodules https://github.com/DeepRoboticsLab/rl_training.git
-  ```
-
-- Using a python interpreter that has Isaac Lab installed, install the library
-
-  ```bash
-  python -m pip install -e source/rl_training
-  ```
-
-- Verify that the extension is correctly installed by running the following command to print all the available environments in the extension:
-
-  ```bash
-  python scripts/tools/list_envs.py
-  ```
-
-<details>
-
-<summary>Setup as Omniverse Extension (Optional, click to expand)</summary>
-
-We provide an example UI extension that will load upon enabling your extension defined in `source/rl_training/rl_training/ui_extension_example.py`.
-
-To enable your extension, follow these steps:
-
-1. **Add the search path of your repository** to the extension manager:
-    - Navigate to the extension manager using `Window` -> `Extensions`.
-    - Click on the **Hamburger Icon** (☰), then go to `Settings`.
-    - In the `Extension Search Paths`, enter the absolute path to `rl_trainingb/source`
-    - If not already present, in the `Extension Search Paths`, enter the path that leads to Isaac Lab's extension directory directory (`IsaacLab/source`)
-    - Click on the **Hamburger Icon** (☰), then click `Refresh`.
-
-2. **Search and enable your extension**:
-    - Find your extension under the `Third Party` category.
-    - Toggle it to enable your extension.
-
-</details>
-
-## Try examples
-
-Deeprobotics Lite3:
+Clone the repository outside your Isaac Lab checkout:
 
 ```bash
-# Train
-python scripts/reinforcement_learning/rsl_rl/train.py --task=Rough-Deeprobotics-Lite3-v0 --headless
-
-# Play
-python scripts/reinforcement_learning/rsl_rl/play.py --task=Rough-Deeprobotics-Lite3-v0 --num_envs=10
+git clone https://github.com/admonakhov/m20_rl.git m20_rl
+cd m20_rl
 ```
 
-Deeprobotics M20:
+Install the extension package into the Python environment that already has Isaac Lab:
 
 ```bash
-# Train
-python scripts/reinforcement_learning/rsl_rl/train.py --task=Rough-Deeprobotics-M20-v0 --headless
-
-# Play
-python scripts/reinforcement_learning/rsl_rl/play.py --task=Rough-Deeprobotics-M20-v0 --num_envs=10
+python -m pip install -e source/rl_training
 ```
 
-> [!NOTE]
-> If you want to control a **SINGLE ROBOT** with the keyboard during playback, add `--keyboard` at the end of the play script.
->
-> ```
-> Key bindings:
-> ====================== ========================= ========================
-> Command                Key (+ve axis)            Key (-ve axis)
-> ====================== ========================= ========================
-> Move along x-axis      Numpad 8 / Arrow Up       Numpad 2 / Arrow Down
-> Move along y-axis      Numpad 4 / Arrow Right    Numpad 6 / Arrow Left
-> Rotate along z-axis    Numpad 7 / Z              Numpad 9 / X
-> ====================== ========================= ========================
-> ```
-* Record video of a trained agent (requires installing `ffmpeg`), add `--video --video_length 200`
-* Play/Train with 32 environments, add `--num_envs 32`
-* Play on specific folder or checkpoint, add `--load_run run_folder_name --checkpoint model.pt`
-* Resume training from folder or checkpoint, add `--resume --load_run run_folder_name --checkpoint model.pt`
-
-## Multi-gpu acceleration
-* To train with multiple GPUs, use the following command, where --nproc_per_node represents the number of available GPUs:
-    ```bash
-    python -m torch.distributed.run --nnodes=1 --nproc_per_node=2 scripts/reinforcement_learning/rsl_rl/train.py --task=<ENV_NAME> --headless 
-    python -m torch.distributed.run --nnodes=1 --nproc_per_node=2 scripts/reinforcement_learning/rsl_rl/train.py --task=Rough-Deeprobotics-Lite3-v0 --headless --distributed --num_envs=2048
-    ```
-* Note: each gpu will have the same number of envs specified in the config, to use the previous total number of envs, devide it by the number of gpus.
-* To scale up training beyond multiple GPUs on a single machine, it is also possible to train across multiple nodes. To train across multiple nodes/machines, it is required to launch an individual process on each node.
-
-    For the master node, use the following command, where --nproc_per_node represents the number of available GPUs, and --nnodes represents the number of nodes:
-    ```bash
-    python -m torch.distributed.run --nproc_per_node=2 --nnodes=2 --node_rank=0 --rdzv_id=123 --rdzv_backend=c10d --rdzv_endpoint=localhost:5555 scripts/reinforcement_learning/rsl_rl/train.py --task=<ENV_NAME> --headless --distributed
-    ```
-    Note that the port (`5555`) can be replaced with any other available port.
-    For non-master nodes, use the following command, replacing `--node_rank` with the index of each machine:
-    ```bash
-    python -m torch.distributed.run --nproc_per_node=2 --nnodes=2 --node_rank=1 --rdzv_id=123 --rdzv_backend=c10d --rdzv_endpoint=ip_of_master_machine:5555 scripts/reinforcement_learning/rsl_rl/train.py --task=<ENV_NAME> --headless --distributed
-    ```
-
-## Tensorboard
-
-To view tensorboard, run:
+Optional sanity check:
 
 ```bash
-tensorboard --logdir=logs
+python scripts/tools/list_envs.py
 ```
 
-## Export Policy to ONNX (without Isaac Sim)
+## Available M20 Tasks
 
-Export a trained checkpoint to ONNX directly from the `.pt` file — no Isaac Sim or environment setup required:
+- `Flat-Deeprobotics-M20-v0`
+- `Rough-Deeprobotics-M20-v0`
+- `Wheelie-Deeprobotics-M20-v0`
+
+The wheelie task is rear-wheel focused and uses its own reduced observation/action space and deploy config.
+
+## Training
+
+Examples:
 
 ```bash
-# Lite3
+# Flat terrain
+python scripts/rsl_rl/train.py --task=Flat-Deeprobotics-M20-v0 --headless
+
+# Rough terrain
+python scripts/rsl_rl/train.py --task=Rough-Deeprobotics-M20-v0 --headless
+
+# Wheelie
+python scripts/rsl_rl/train.py --task=Wheelie-Deeprobotics-M20-v0 --headless
+```
+
+Logs are written under:
+
+```text
+logs/rsl_rl/<experiment_name>/<timestamp>/
+```
+
+During training, the repo now automatically saves:
+
+- `params/env.yaml`
+- `params/agent.yaml`
+- `params/deploy.yaml`
+
+That `deploy.yaml` is the runtime contract for `sdk_deploy`: joint order, action scales, stiffness, damping, default joint positions, observation layout, and command limits.
+
+## Playback in Isaac Sim
+
+Run a trained checkpoint in Isaac Sim:
+
+```bash
+python scripts/rsl_rl/play.py --task=Flat-Deeprobotics-M20-v0 --num_envs=10
+```
+
+Useful options:
+
+- `--keyboard`
+  Run a single robot and drive commands from the keyboard.
+- `--load_run <run_folder>`
+  Select a specific log directory.
+- `--checkpoint <path-or-file>`
+  Load an explicit checkpoint.
+- `--video --video_length 200`
+  Record playback video.
+
+Keyboard mode is intended for a single robot:
+
+```bash
+python scripts/rsl_rl/play.py --task=Flat-Deeprobotics-M20-v0 --keyboard
+```
+
+## Exporting a Policy
+
+### Option 1: export from `play.py`
+
+When you run `scripts/rsl_rl/play.py`, it exports:
+
+- `exported/policy.onnx`
+- `exported/policy.pt`
+
+inside the selected run directory.
+
+### Option 2: fast export without Isaac Sim
+
+```bash
 python scripts/tools/export_onnx_fast.py \
-    --checkpoint_path logs/rsl_rl/deeprobotics_lite3_rough/<run>/model_5000.pt \
-    --robot lite3 \
-    --output_path exported/lite3_policy.onnx
-
-# M20
-python scripts/tools/export_onnx_fast.py \
-    --checkpoint_path logs/rsl_rl/deeprobotics_m20_rough/<run>/model_5000.pt \
+    --checkpoint_path logs/rsl_rl/deeprobotics_m20_flat/<run>/model_XXXX.pt \
     --robot m20 \
     --output_path exported/m20_policy.onnx
 ```
 
-Robot metadata (joint names, stiffness/damping, default positions, action scales) is embedded in the ONNX file as model properties. Add `--no_metadata` to skip this.
+This path is useful when you only need ONNX and do not want to launch Isaac Sim.
 
-## Compare Training Runs
+## Deploy Config Workflow
 
-Diff the `agent.yaml` and `env.yaml` configs between two runs (saved automatically to `params/` by `train.py`):
+For deployment, you typically need both:
+
+- `policy.onnx`
+- matching `deploy.yaml`
+
+Recommended manual flow:
+
+1. Train a policy.
+2. Export or obtain `policy.onnx`.
+3. Copy the matching `params/deploy.yaml` into:
+
+```text
+sdk_deploy/src/M20_sdk_deploy/policy/deploy.yaml
+```
+
+4. Copy the ONNX model into:
+
+```text
+sdk_deploy/src/M20_sdk_deploy/policy/policy.onnx
+```
+
+`sdk_deploy` now reads `deploy.yaml` at runtime and adapts observation size, action size, active joints, stiffness, damping, default joint positions, and command scaling from that file.
+
+## Sim-to-Sim with `sdk_deploy`
+
+Install MuJoCo-side Python packages if needed:
+
+```bash
+python -m pip install "numpy<2.0" mujoco
+```
+
+Build the ROS 2 workspace:
+
+```bash
+cd sdk_deploy
+source /opt/ros/humble/setup.bash
+colcon build --packages-up-to m20_sdk_deploy --cmake-args -DBUILD_PLATFORM=x86
+```
+
+Important:
+
+- Build `sdk_deploy` outside `conda` when possible.
+- If `drdds` fails with `ModuleNotFoundError: No module named 'em'`, ROS is using your `conda` Python instead of `/usr/bin/python3`.
+- A reliable fix is:
+
+```bash
+conda deactivate
+unset PYTHONPATH
+source /opt/ros/humble/setup.bash
+cd sdk_deploy
+colcon build --packages-up-to m20_sdk_deploy --cmake-args -DBUILD_PLATFORM=x86
+```
+
+### Run sim-to-sim
+
+Open two terminals from the repo root.
+
+Terminal 1:
+
+```bash
+./deploy.sh
+```
+
+Terminal 2:
+
+```bash
+./simulate.sh
+```
+
+What these scripts currently do:
+
+- `deploy.sh`
+  - `source /opt/ros/humble/setup.bash`
+  - `source sdk_deploy/install/setup.bash`
+  - `ros2 run m20_sdk_deploy rl_deploy`
+- `simulate.sh`
+  - `source sdk_deploy/install/setup.bash`
+  - `python3 sdk_deploy/src/M20_sdk_deploy/interface/robot/simulation/mujoco_simulation_ros2.py`
+
+Both scripts set `ROS_DOMAIN_ID=1`.
+
+## Sim-to-Real Notes
+
+The same `m20_sdk_deploy` package is also the deployment side for the real robot. In practice:
+
+- build `sdk_deploy` for the target platform
+- provide the correct `policy.onnx`
+- provide the matching `deploy.yaml`
+- run `ros2 run m20_sdk_deploy rl_deploy`
+
+The exact networking, authorization, and hardware-side SDK enabling steps depend on your robot setup and are not fully automated by this repository.
+
+## Common Commands
+
+Train flat:
+
+```bash
+python scripts/rsl_rl/train.py --task=Flat-Deeprobotics-M20-v0 --headless
+```
+
+Train wheelie:
+
+```bash
+python scripts/rsl_rl/train.py --task=Wheelie-Deeprobotics-M20-v0 --headless
+```
+
+Play a trained run:
+
+```bash
+python scripts/rsl_rl/play.py --task=Flat-Deeprobotics-M20-v0 --load_run <run_folder>
+```
+
+Compare two runs:
 
 ```bash
 python scripts/tools/compare_runs.py \
-    logs/rsl_rl/deeprobotics_lite3_rough/<run1> \
-    logs/rsl_rl/deeprobotics_lite3_rough/<run2>
+    logs/rsl_rl/deeprobotics_m20_flat/<run1> \
+    logs/rsl_rl/deeprobotics_m20_flat/<run2>
 ```
 
 ## Troubleshooting
 
-### Pylance Missing Indexing of Extensions
+### `ament_cmake` not found during `colcon build`
 
-In some VsCode versions, the indexing of part of the extensions is missing. In this case, add the path to your extension in `.vscode/settings.json` under the key `"python.analysis.extraPaths"`.
-
-**Note: Replace `<path-to-isaac-lab>` with your own IsaacLab path.**
-
-```json
-{
-    "python.languageServer": "Pylance",
-    "python.analysis.extraPaths": [
-        "${workspaceFolder}/source/rl_training",
-        "/<path-to-isaac-lab>/source/isaaclab",
-        "/<path-to-isaac-lab>/source/isaaclab_assets",
-        "/<path-to-isaac-lab>/source/isaaclab_mimic",
-        "/<path-to-isaac-lab>/source/isaaclab_rl",
-        "/<path-to-isaac-lab>/source/isaaclab_tasks",
-    ]
-}
-```
-
-### Clean USD Caches
-
-Temporary USD files are generated in `/tmp/IsaacLab/usd_{date}_{time}_{random}` during simulation runs. These files can consume significant disk space and can be cleaned by:
+ROS 2 environment is not sourced:
 
 ```bash
-rm -rf /tmp/IsaacLab/usd_*
+source /opt/ros/humble/setup.bash
 ```
 
-## Acknowledgements
+### `ModuleNotFoundError: No module named 'em'`
 
-The project uses some code from the following open-source code repositories:
+`colcon` is picking up `conda` Python. Use system Python / ROS shell instead of `conda`.
 
-- [fan-ziqi/robot_lab](https://github.com/fan-ziqi/robot_lab)
+### ONNX input mismatch like `Got: 57 Expected: 31`
+
+`policy.onnx` and `deploy.yaml` do not match. Replace both files as a pair from the same training run.
+
+### `sdk_deploy` build depends on `drdds`
+
+If `m20_sdk_deploy` says `install/drdds/share/drdds/package.sh` is missing, `drdds` did not build successfully first.
+
+## Notes on Current Implementation
+
+- The current scripts use `scripts/rsl_rl/...`, not `scripts/reinforcement_learning/...`.
+- `train.py` exports `deploy.yaml` automatically for supported manager-based RL environments.
+- `play.py` exports ONNX into the selected run directory.
+- `sdk_deploy` reads `deploy.yaml` dynamically and supports reduced-dimension policies such as the wheelie task.
