@@ -9,6 +9,7 @@ from __future__ import annotations
 import torch
 from typing import TYPE_CHECKING, Sequence
 
+import isaaclab.utils.math as math_utils
 from isaaclab.managers import CommandTerm, CommandTermCfg
 from isaaclab.utils import configclass
 
@@ -92,6 +93,59 @@ class UniformThresholdVelocityCommandCfg(mdp.UniformVelocityCommandCfg):
     """Configuration for the uniform threshold velocity command generator."""
 
     class_type: type = UniformThresholdVelocityCommand
+
+
+class VerticalBodyVelocityCommand(UniformThresholdVelocityCommand):
+    """Velocity command that keeps its planar direction aligned with gravity while the body pitches/rolls.
+
+    The command is sampled in a yaw-aligned frame and then projected into the current body frame every update.
+    This makes the effective forward/side command adapt when the robot rides in a near-vertical posture.
+    """
+
+    cfg: mdp.VerticalBodyVelocityCommandCfg
+
+    def __init__(self, cfg: mdp.VerticalBodyVelocityCommandCfg, env: ManagerBasedEnv):
+        super().__init__(cfg, env)
+        self.planar_command_yaw = torch.zeros(self.num_envs, 2, device=self.device)
+
+    def _resample_command(self, env_ids: Sequence[int]):
+        r = torch.empty(len(env_ids), device=self.device)
+        self.planar_command_yaw[env_ids, 0] = r.uniform_(*self.cfg.ranges.lin_vel_x)
+        self.planar_command_yaw[env_ids, 1] = r.uniform_(*self.cfg.ranges.lin_vel_y)
+        self.vel_command_b[env_ids, 2] = r.uniform_(*self.cfg.ranges.ang_vel_z)
+        if self.cfg.heading_command:
+            self.heading_target[env_ids] = r.uniform_(*self.cfg.ranges.heading)
+            self.is_heading_env[env_ids] = r.uniform_(0.0, 1.0) <= self.cfg.rel_heading_envs
+        self.is_standing_env[env_ids] = r.uniform_(0.0, 1.0) <= self.cfg.rel_standing_envs
+
+    def _update_command(self):
+        if self.cfg.heading_command:
+            env_ids = self.is_heading_env.nonzero(as_tuple=False).flatten()
+            heading_error = math_utils.wrap_to_pi(self.heading_target[env_ids] - self.robot.data.heading_w[env_ids])
+            self.vel_command_b[env_ids, 2] = torch.clip(
+                self.cfg.heading_control_stiffness * heading_error,
+                min=self.cfg.ranges.ang_vel_z[0],
+                max=self.cfg.ranges.ang_vel_z[1],
+            )
+
+        root_quat_w = self.robot.data.root_quat_w
+        yaw_only_quat_w = math_utils.yaw_quat(root_quat_w)
+
+        planar_command_yaw_3d = torch.zeros(self.num_envs, 3, device=self.device)
+        planar_command_yaw_3d[:, :2] = self.planar_command_yaw
+        planar_command_w = math_utils.quat_apply(yaw_only_quat_w, planar_command_yaw_3d)
+        planar_command_b = math_utils.quat_apply_inverse(root_quat_w, planar_command_w)
+        self.vel_command_b[:, :2] = planar_command_b[:, :2]
+
+        standing_env_ids = self.is_standing_env.nonzero(as_tuple=False).flatten()
+        self.vel_command_b[standing_env_ids, :] = 0.0
+
+
+@configclass
+class VerticalBodyVelocityCommandCfg(UniformThresholdVelocityCommandCfg):
+    """Configuration for wheelie-style planar velocity commands."""
+
+    class_type: type = VerticalBodyVelocityCommand
 
 
 class DiscreteCommandController(CommandTerm):

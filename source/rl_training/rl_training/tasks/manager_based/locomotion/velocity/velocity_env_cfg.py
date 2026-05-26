@@ -891,7 +891,9 @@ class LocomotionVelocityRoughEnvCfg(ManagerBasedRLEnvCfg):
         for attr in dir(self.rewards):
             if not attr.startswith("__"):
                 reward_attr = getattr(self.rewards, attr)
-                if not callable(reward_attr) and reward_attr.weight == 0:
+                if reward_attr is None or callable(reward_attr) or not hasattr(reward_attr, "weight"):
+                    continue
+                if reward_attr.weight == 0:
                     setattr(self.rewards, attr, None)
 
 

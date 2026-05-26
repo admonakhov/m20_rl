@@ -1,11 +1,11 @@
 import numpy as np
 import os
 import yaml
+import re
 
 from isaaclab.assets import Articulation
 from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab.utils import class_to_dict
-from isaaclab.utils.string import resolve_matching_names
 
 
 def format_value(x):
@@ -21,25 +21,38 @@ def format_value(x):
 
 def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
     asset: Articulation = env.scene["robot"]
+    available_joint_names = list(asset.data.joint_names)
     joint_sdk_names = getattr(env.cfg.scene.robot, "joint_sdk_names", None)
     if joint_sdk_names is None:
         joint_sdk_names = getattr(env.cfg, "joint_names", None)
     if joint_sdk_names is None:
-        joint_sdk_names = list(asset.data.joint_names)
+        joint_sdk_names = available_joint_names
 
-    joint_ids_map, _ = resolve_matching_names(asset.data.joint_names, joint_sdk_names, preserve_order=True)
+    resolved_joint_names = []
+    joint_ids_map = []
+    for joint_name in joint_sdk_names:
+        if joint_name in available_joint_names:
+            resolved_joint_names.append(joint_name)
+            joint_ids_map.append(available_joint_names.index(joint_name))
+            continue
+
+        matches = [name for name in available_joint_names if re.fullmatch(joint_name, name)]
+        if len(matches) == 1:
+            resolved_joint_names.append(matches[0])
+            joint_ids_map.append(available_joint_names.index(matches[0]))
+
+    if not resolved_joint_names:
+        resolved_joint_names = available_joint_names
+        joint_ids_map = list(range(len(available_joint_names)))
 
     cfg = {}  # noqa: SIM904
     cfg["joint_ids_map"] = joint_ids_map
     cfg["step_dt"] = env.cfg.sim.dt * env.cfg.decimation
-    stiffness = np.zeros(len(joint_sdk_names))
-    stiffness[joint_ids_map] = asset.data.default_joint_stiffness[0].detach().cpu().numpy().tolist()
+    stiffness = asset.data.default_joint_stiffness[0].detach().cpu().numpy()[joint_ids_map]
     cfg["stiffness"] = stiffness.tolist()
-    damping = np.zeros(len(joint_sdk_names))
-    damping[joint_ids_map] = asset.data.default_joint_damping[0].detach().cpu().numpy().tolist()
+    damping = asset.data.default_joint_damping[0].detach().cpu().numpy()[joint_ids_map]
     cfg["damping"] = damping.tolist()
-    default_joint_pos = np.zeros(len(joint_sdk_names))
-    default_joint_pos[joint_ids_map] = asset.data.default_joint_pos[0].detach().cpu().numpy().tolist()
+    default_joint_pos = asset.data.default_joint_pos[0].detach().cpu().numpy()[joint_ids_map]
     cfg["default_joint_pos"] = default_joint_pos.tolist()
 
     # --- commands ---

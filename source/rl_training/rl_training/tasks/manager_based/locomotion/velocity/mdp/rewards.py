@@ -921,6 +921,19 @@ def upward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("r
     return reward
 
 
+def body_forward_vertical_l2(
+    env: ManagerBasedRLEnv,
+    target: float = 0.95,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Penalize deviation of the body forward axis from an upward rear-wheel posture."""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    forward_axis_b = torch.zeros(env.num_envs, 3, device=env.device)
+    forward_axis_b[:, 0] = 1.0
+    forward_axis_w = math_utils.quat_apply(asset.data.root_quat_w, forward_axis_b)
+    return torch.square(target - forward_axis_w[:, 2])
+
+
 
 
 
