@@ -250,6 +250,27 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             filename="policy.pt",
         )
 
+    # Optional phase-foot visualization is disabled by default unless all of its
+    # runtime dependencies are wired up explicitly.
+    VIS_ENABLED = False
+    VIS_REF_ENABLE = False
+    draw_interface = None
+    foot_ids = None
+    phase_offsets = None
+    cycle_time = None
+    gait_span = None
+    gait_psi = None
+    gait_delta = None
+    x_offset = None
+    stance_span = None
+    cmd_threshold = None
+    stand_ref_z_offset = None
+    cmd_hist = None
+    act_hist = None
+    stand_ref_body = None
+    phase_vis_z_printed = False
+    color_palette = None
+
     dt = env.unwrapped.step_dt
     # reset environment
     obs, _ = env.reset()
@@ -267,7 +288,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             obs, _, _, _ = env.step(actions)
 
         if (
-            VIS_ENABLEd
+            VIS_ENABLED
             and draw_interface is not None
             and foot_ids is not None
             and phase_offsets is not None
