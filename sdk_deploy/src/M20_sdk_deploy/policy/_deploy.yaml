@@ -1,4 +1,4 @@
-joint_ids_map: [0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11, 12, 13, 14, 15]
+joint_ids_map: [0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, 12, 13, 14, 15]
 step_dt: 0.02
 stiffness: [80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0,
   0.0, 0.0, 0.0, 0.0]
@@ -9,9 +9,9 @@ default_joint_pos: [0.0, -0.6, 1.0, 0.0, -0.6, 1.0, 0.0, 0.6, -1.0, 0.0, 0.6, -1
 commands:
   base_velocity:
     ranges:
-      lin_vel_x: [-0.8, 0.8]
-      lin_vel_y: [-0.15, 0.15]
-      ang_vel_z: [-0.6, 0.6]
+      lin_vel_x: [-2.0, 2.0]
+      lin_vel_y: [-1.0, 1.0]
+      ang_vel_z: [-1.0, 1.0]
       heading: !!python/tuple [-3.141592653589793, 3.141592653589793]
 fsm:
   auto_switch_on_back:
@@ -49,7 +49,7 @@ actions:
     - [-100.0, 100.0]
     - [-100.0, 100.0]
     joint_names: [fl_wheel_joint, fr_wheel_joint, hl_wheel_joint, hr_wheel_joint]
-    scale: [6.0, 6.0, 6.0, 6.0]
+    scale: [5.0, 5.0, 5.0, 5.0]
     offset: 0.0
     joint_ids: [12, 13, 14, 15]
 observations:
