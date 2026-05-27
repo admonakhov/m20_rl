@@ -53,5 +53,5 @@ class DeeproboticsM20WheeliePPORunnerCfg(DeeproboticsM20FlatPPORunnerCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        self.max_iterations = 10000
+        self.max_iterations = 50000
         self.experiment_name = "deeprobotics_m20_wheelie"

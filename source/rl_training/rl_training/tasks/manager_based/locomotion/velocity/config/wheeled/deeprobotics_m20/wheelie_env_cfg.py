@@ -30,22 +30,28 @@ class DeeproboticsM20WheelieEnvCfg(DeeproboticsM20FlatEnvCfg):
     ]
     front_wheel_joint_names = ["fl_wheel_joint", "fr_wheel_joint"]
     rear_wheel_joint_names = ["hl_wheel_joint", "hr_wheel_joint"]
+    leg_joint_names = front_leg_joint_names + rear_leg_joint_names
+    wheel_joint_names = front_wheel_joint_names + rear_wheel_joint_names
+    joint_names = leg_joint_names + wheel_joint_names
     active_joint_names = rear_leg_joint_names + rear_wheel_joint_names
+    inactive_joint_names = front_leg_joint_names + front_wheel_joint_names
 
     base_link_name = "base_link"
+    front_wheel_body_regex = "f[l,r]_wheel"
     rear_wheel_body_regex = "h[l,r]_wheel"
+    wheel_body_regex = ".*_wheel"
     non_wheel_body_regex = "^(?!.*_wheel).*$"
 
     def __post_init__(self):
         super().__post_init__()
 
         # ------------------------------Robot pose------------------------------
-        self.leg_joint_names = self.rear_leg_joint_names
-        self.wheel_joint_names = self.rear_wheel_joint_names
-        self.joint_names = self.active_joint_names
-        self.hipx_joint_names = ["hl_hipx_joint", "hr_hipx_joint"]
-        self.hipy_joint_names = ["hl_hipy_joint", "hr_hipy_joint"]
-        self.knee_joint_names = ["hl_knee_joint", "hr_knee_joint"]
+        self.leg_joint_names = self.front_leg_joint_names + self.rear_leg_joint_names
+        self.wheel_joint_names = self.front_wheel_joint_names + self.rear_wheel_joint_names
+        self.joint_names = self.leg_joint_names + self.wheel_joint_names
+        self.hipx_joint_names = ["fl_hipx_joint", "fr_hipx_joint", "hl_hipx_joint", "hr_hipx_joint"]
+        self.hipy_joint_names = ["fl_hipy_joint", "fr_hipy_joint", "hl_hipy_joint", "hr_hipy_joint"]
+        self.knee_joint_names = ["fl_knee_joint", "fr_knee_joint", "hl_knee_joint", "hr_knee_joint"]
         self.foot_link_name = self.rear_wheel_body_regex
 
         self.scene.robot.init_state.pos = (0.0, 0.0, 0.52)
@@ -87,17 +93,19 @@ class DeeproboticsM20WheelieEnvCfg(DeeproboticsM20FlatEnvCfg):
         )
 
         # ------------------------------Observations------------------------------
-        self.observations.policy.joint_pos.func = mdp.joint_pos_rel
+        self.observations.policy.joint_pos.func = mdp.joint_pos_rel_without_wheel
         self.observations.policy.joint_pos.params = {
-            "asset_cfg": SceneEntityCfg("robot", joint_names=self.rear_leg_joint_names, preserve_order=True)
+            "asset_cfg": SceneEntityCfg("robot", joint_names=self.joint_names, preserve_order=True),
+            "wheel_asset_cfg": SceneEntityCfg("robot", joint_names=self.wheel_joint_names),
         }
-        self.observations.critic.joint_pos.func = mdp.joint_pos_rel
+        self.observations.critic.joint_pos.func = mdp.joint_pos_rel_without_wheel
         self.observations.critic.joint_pos.params = {
-            "asset_cfg": SceneEntityCfg("robot", joint_names=self.rear_leg_joint_names, preserve_order=True)
+            "asset_cfg": SceneEntityCfg("robot", joint_names=self.joint_names, preserve_order=True),
+            "wheel_asset_cfg": SceneEntityCfg("robot", joint_names=self.wheel_joint_names),
         }
-        self.observations.policy.joint_vel.params["asset_cfg"].joint_names = self.active_joint_names
+        self.observations.policy.joint_vel.params["asset_cfg"].joint_names = self.joint_names
         self.observations.policy.joint_vel.params["asset_cfg"].preserve_order = True
-        self.observations.critic.joint_vel.params["asset_cfg"].joint_names = self.active_joint_names
+        self.observations.critic.joint_vel.params["asset_cfg"].joint_names = self.joint_names
         self.observations.critic.joint_vel.params["asset_cfg"].preserve_order = True
 
         # ------------------------------Actions------------------------------
@@ -105,13 +113,13 @@ class DeeproboticsM20WheelieEnvCfg(DeeproboticsM20FlatEnvCfg):
         self.actions.joint_vel.scale = 6.0
         self.actions.joint_pos.clip = {".*": (-100.0, 100.0)}
         self.actions.joint_vel.clip = {".*": (-100.0, 100.0)}
-        self.actions.joint_pos.joint_names = self.rear_leg_joint_names
-        self.actions.joint_vel.joint_names = self.rear_wheel_joint_names
+        self.actions.joint_pos.joint_names = self.leg_joint_names
+        self.actions.joint_vel.joint_names = self.wheel_joint_names
 
         # ------------------------------Events------------------------------
         self.events.randomize_apply_external_force_torque = None
         self.events.randomize_push_robot = None
-        self.events.randomize_actuator_gains.params["asset_cfg"].joint_names = self.active_joint_names
+        self.events.randomize_actuator_gains.params["asset_cfg"].joint_names = self.joint_names
         self.events.randomize_reset_base.params = {
             "pose_range": {
                 "x": (-0.05, 0.05),
@@ -143,23 +151,23 @@ class DeeproboticsM20WheelieEnvCfg(DeeproboticsM20FlatEnvCfg):
         self.rewards.body_lin_acc_l2.params["asset_cfg"].body_names = [self.base_link_name]
 
         self.rewards.joint_torques_l2.weight = -5.0e-5
-        self.rewards.joint_torques_l2.params["asset_cfg"].joint_names = self.rear_leg_joint_names
+        self.rewards.joint_torques_l2.params["asset_cfg"].joint_names = self.leg_joint_names
         self.rewards.joint_torques_wheel_l2.weight = -1.0e-5
-        self.rewards.joint_torques_wheel_l2.params["asset_cfg"].joint_names = self.rear_wheel_joint_names
+        self.rewards.joint_torques_wheel_l2.params["asset_cfg"].joint_names = self.wheel_joint_names
         self.rewards.joint_vel_l2.weight = 0.0
-        self.rewards.joint_vel_l2.params["asset_cfg"].joint_names = self.rear_leg_joint_names
+        self.rewards.joint_vel_l2.params["asset_cfg"].joint_names = self.leg_joint_names
         self.rewards.joint_vel_wheel_l2.weight = -5.0e-4
-        self.rewards.joint_vel_wheel_l2.params["asset_cfg"].joint_names = self.rear_wheel_joint_names
+        self.rewards.joint_vel_wheel_l2.params["asset_cfg"].joint_names = self.wheel_joint_names
         self.rewards.joint_acc_l2.weight = -2.0e-7
-        self.rewards.joint_acc_l2.params["asset_cfg"].joint_names = self.rear_leg_joint_names
+        self.rewards.joint_acc_l2.params["asset_cfg"].joint_names = self.leg_joint_names
         self.rewards.joint_acc_wheel_l2.weight = -1.0e-7
-        self.rewards.joint_acc_wheel_l2.params["asset_cfg"].joint_names = self.rear_wheel_joint_names
+        self.rewards.joint_acc_wheel_l2.params["asset_cfg"].joint_names = self.wheel_joint_names
         self.rewards.joint_pos_limits.weight = -5.0
-        self.rewards.joint_pos_limits.params["asset_cfg"].joint_names = self.rear_leg_joint_names
+        self.rewards.joint_pos_limits.params["asset_cfg"].joint_names = self.leg_joint_names
         self.rewards.joint_vel_limits.weight = -0.1
-        self.rewards.joint_vel_limits.params["asset_cfg"].joint_names = self.rear_wheel_joint_names
+        self.rewards.joint_vel_limits.params["asset_cfg"].joint_names = self.wheel_joint_names
         self.rewards.joint_power.weight = -2.0e-5
-        self.rewards.joint_power.params["asset_cfg"].joint_names = self.rear_leg_joint_names
+        self.rewards.joint_power.params["asset_cfg"].joint_names = self.leg_joint_names
         self.rewards.stand_still.weight = -0.5
         self.rewards.stand_still.params["asset_cfg"].joint_names = self.rear_leg_joint_names
         self.rewards.action_rate_l2.weight = -0.01
@@ -213,6 +221,21 @@ class DeeproboticsM20WheelieEnvCfg(DeeproboticsM20FlatEnvCfg):
             weight=-0.2,
             params={"asset_cfg": SceneEntityCfg("robot", joint_names=self.front_wheel_joint_names)},
         )
+        self.rewards.front_wheel_contacts = RewTerm(
+            func=mdp.undesired_contacts,
+            weight=-2.0,
+            params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=[self.front_wheel_body_regex]), "threshold": 1.0},
+        )
+        self.rewards.front_leg_vel_l2 = RewTerm(
+            func=mdp.joint_vel_l2,
+            weight=-0.05,
+            params={"asset_cfg": SceneEntityCfg("robot", joint_names=self.front_leg_joint_names)},
+        )
+        self.rewards.joint_mirror.weight = -0.03
+        self.rewards.joint_mirror.params["mirror_joints"] = [
+            ["fl_(hipx|hipy|knee).*", "fr_(hipx|hipy|knee).*"],
+            ["hl_(hipx|hipy|knee).*", "hr_(hipx|hipy|knee).*"],
+        ]
 
         # Disable locomotion terms that are tied to four supporting wheels.
         self.rewards.feet_air_time.weight = 0.0
@@ -224,12 +247,14 @@ class DeeproboticsM20WheelieEnvCfg(DeeproboticsM20FlatEnvCfg):
         self.rewards.phase_foot_trajectory_exp.weight = 0.0
         self.rewards.feet_height.weight = 0.0
         self.rewards.feet_height_body.weight = 0.0
-        self.rewards.joint_mirror.weight = 0.0
         self.rewards.action_mirror.weight = 0.0
         self.rewards.action_sync.weight = 0.0
-        self.rewards.hipx_joint_pos_penalty.weight = 0.0
-        self.rewards.hipy_joint_pos_penalty.weight = 0.0
-        self.rewards.knee_joint_pos_penalty.weight = 0.0
+        self.rewards.hipx_joint_pos_penalty.weight = -0.2
+        self.rewards.hipx_joint_pos_penalty.params["asset_cfg"].joint_names = self.hipx_joint_names
+        self.rewards.hipy_joint_pos_penalty.weight = -0.05
+        self.rewards.hipy_joint_pos_penalty.params["asset_cfg"].joint_names = self.hipy_joint_names
+        self.rewards.knee_joint_pos_penalty.weight = -0.05
+        self.rewards.knee_joint_pos_penalty.params["asset_cfg"].joint_names = self.knee_joint_names
 
         # ------------------------------Terminations------------------------------
         self.terminations.illegal_contact = DoneTerm(

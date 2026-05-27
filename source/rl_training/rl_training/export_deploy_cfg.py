@@ -126,6 +126,17 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
             del term_cfg[_]
         cfg["observations"][obs_name] = term_cfg
 
+    # --- deploy-time FSM helpers ---
+    cfg["fsm"] = {
+        "auto_switch_on_back": {
+            "enabled": True,
+            "target_state": "liedown",
+            "projected_gravity_z_threshold": 0.2,
+            "recovery_projected_gravity_z_threshold": -0.1,
+            "min_duration": 0.15,
+        }
+    }
+
     # --- save config file ---
     filename = os.path.join(log_dir, "params", "deploy.yaml")
     if not os.path.exists(os.path.dirname(filename)):
