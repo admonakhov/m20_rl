@@ -1,25 +1,20 @@
-joint_ids_map: [0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11, 12, 13, 14, 15]
+joint_names: [fl_hipx_joint, fl_hipy_joint, fl_knee_joint, fl_wheel_joint, fr_hipx_joint,
+  fr_hipy_joint, fr_knee_joint, fr_wheel_joint, hl_hipx_joint, hl_hipy_joint, hl_knee_joint,
+  hl_wheel_joint, hr_hipx_joint, hr_hipy_joint, hr_knee_joint, hr_wheel_joint]
 step_dt: 0.02
-stiffness: [80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0,
-  0.0, 0.0, 0.0, 0.0]
-damping: [2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 0.6, 0.6, 0.6,
+stiffness: [80.0, 80.0, 80.0, 0.0, 80.0, 80.0, 80.0, 0.0, 80.0, 80.0, 80.0, 0.0, 80.0,
+  80.0, 80.0, 0.0]
+damping: [2.0, 2.0, 2.0, 0.6, 2.0, 2.0, 2.0, 0.6, 2.0, 2.0, 2.0, 0.6, 2.0, 2.0, 2.0,
   0.6]
-default_joint_pos: [0.0, -0.6, 1.0, 0.0, -0.6, 1.0, 0.0, 0.6, -1.0, 0.0, 0.6, -1.0,
-  0.0, 0.0, 0.0, 0.0]
+default_joint_pos: [0.0, -0.6, 1.0, 0.0, 0.0, -0.6, 1.0, 0.0, 0.0, 0.6, -1.0, 0.0,
+  0.0, 0.6, -1.0, 0.0]
 commands:
   base_velocity:
     ranges:
       lin_vel_x: [-0.8, 0.8]
       lin_vel_y: [-0.15, 0.15]
       ang_vel_z: [-0.6, 0.6]
-      heading: !!python/tuple [-3.141592653589793, 3.141592653589793]
-fsm:
-  auto_switch_on_back:
-    enabled: true
-    target_state: liedown
-    projected_gravity_z_threshold: 0.2
-    recovery_projected_gravity_z_threshold: -0.1
-    min_duration: 0.15
+      heading: [-3.14, 3.14]
 actions:
   joint_pos:
     clip:
@@ -52,6 +47,7 @@ actions:
     scale: [6.0, 6.0, 6.0, 6.0]
     offset: 0.0
     joint_ids: [12, 13, 14, 15]
+joint_ids_map: [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 3, 7, 11, 15]
 observations:
   base_ang_vel:
     params: {}
@@ -125,3 +121,6 @@ observations:
     scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
       1.0, 1.0]
     history_length: 1
+fsm:
+  auto_switch_on_back: {enabled: true, target_state: liedown, projected_gravity_z_threshold: 0.2,
+    recovery_projected_gravity_z_threshold: -0.1, min_duration: 0.15}

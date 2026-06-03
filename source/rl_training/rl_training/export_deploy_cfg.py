@@ -29,42 +29,46 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
         joint_sdk_names = available_joint_names
 
     resolved_joint_names = []
-    joint_ids_map = []
+    resolved_joint_asset_ids = []
     for joint_name in joint_sdk_names:
         if joint_name in available_joint_names:
             resolved_joint_names.append(joint_name)
-            joint_ids_map.append(available_joint_names.index(joint_name))
+            resolved_joint_asset_ids.append(available_joint_names.index(joint_name))
             continue
 
         matches = [name for name in available_joint_names if re.fullmatch(joint_name, name)]
         if len(matches) == 1:
             resolved_joint_names.append(matches[0])
-            joint_ids_map.append(available_joint_names.index(matches[0]))
+            resolved_joint_asset_ids.append(available_joint_names.index(matches[0]))
 
     if not resolved_joint_names:
         resolved_joint_names = available_joint_names
-        joint_ids_map = list(range(len(available_joint_names)))
+        resolved_joint_asset_ids = list(range(len(available_joint_names)))
 
     cfg = {}  # noqa: SIM904
-    cfg["joint_ids_map"] = joint_ids_map
+    cfg["joint_names"] = resolved_joint_names
     cfg["step_dt"] = env.cfg.sim.dt * env.cfg.decimation
-    stiffness = asset.data.default_joint_stiffness[0].detach().cpu().numpy()[joint_ids_map]
+    stiffness = asset.data.default_joint_stiffness[0].detach().cpu().numpy()[resolved_joint_asset_ids]
     cfg["stiffness"] = stiffness.tolist()
-    damping = asset.data.default_joint_damping[0].detach().cpu().numpy()[joint_ids_map]
+    damping = asset.data.default_joint_damping[0].detach().cpu().numpy()[resolved_joint_asset_ids]
     cfg["damping"] = damping.tolist()
-    default_joint_pos = asset.data.default_joint_pos[0].detach().cpu().numpy()[joint_ids_map]
+    default_joint_pos = asset.data.default_joint_pos[0].detach().cpu().numpy()[resolved_joint_asset_ids]
     cfg["default_joint_pos"] = default_joint_pos.tolist()
 
     # --- commands ---
     cfg["commands"] = {}
     if hasattr(env.cfg.commands, "base_velocity"):  # some environments do not have base_velocity command
         cfg["commands"]["base_velocity"] = {}
-        if hasattr(env.cfg.commands.base_velocity, "limit_ranges"):
+        deploy_ranges = getattr(env.cfg, "deploy_base_velocity_ranges", None)
+        if deploy_ranges is not None:
+            ranges = {key: list(value) for key, value in deploy_ranges.items()}
+        elif hasattr(env.cfg.commands.base_velocity, "limit_ranges"):
             ranges = env.cfg.commands.base_velocity.limit_ranges.to_dict()
         else:
             ranges = env.cfg.commands.base_velocity.ranges.to_dict()
         for item_name in ["lin_vel_x", "lin_vel_y", "ang_vel_z"]:
-            ranges[item_name] = list(ranges[item_name])
+            if item_name in ranges:
+                ranges[item_name] = list(ranges[item_name])
         cfg["commands"]["base_velocity"]["ranges"] = ranges
 
     # --- actions ---
@@ -98,6 +102,12 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
             cfg["actions"][action_name]["joint_ids"] = None
         else:
             cfg["actions"][action_name]["joint_ids"] = action_term._joint_ids
+
+    policy_order = []
+    if "joint_pos" in cfg["actions"] and "joint_vel" in cfg["actions"]:
+        policy_order.extend(cfg["actions"]["joint_pos"].get("joint_names", []))
+        policy_order.extend(cfg["actions"]["joint_vel"].get("joint_names", []))
+    cfg["joint_ids_map"] = [resolved_joint_names.index(joint_name) for joint_name in policy_order]
 
     # --- observations ---
     obs_names = env.observation_manager.active_terms["policy"]

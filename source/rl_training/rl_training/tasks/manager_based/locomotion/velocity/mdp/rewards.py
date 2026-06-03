@@ -191,6 +191,18 @@ def joint_pos_penalty(
     return reward
 
 
+def joint_target_deviation_l2(
+    env: ManagerBasedRLEnv,
+    target: list[float],
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Penalize deviation from an explicit joint target pose."""
+    asset: Articulation = env.scene[asset_cfg.name]
+    target_tensor = torch.tensor(target, device=env.device, dtype=asset.data.joint_pos.dtype)
+    diff = asset.data.joint_pos[:, asset_cfg.joint_ids] - target_tensor.unsqueeze(0)
+    return torch.sum(torch.square(diff), dim=1)
+
+
 def wheel_vel_penalty(
     env: ManagerBasedRLEnv,
     sensor_cfg: SceneEntityCfg,

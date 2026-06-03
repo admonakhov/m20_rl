@@ -90,6 +90,7 @@ struct UserCommand {
     double time_stamp;
         uint8_t safe_control_mode; //0 normal, 1 stand, 2 sit, 3 joint damping
     uint8_t target_mode;
+    // These fields carry actual command values (m/s, m/s, rad/s) and are clamped by deploy.yaml ranges.
     float forward_vel_scale = 0;
     float side_vel_scale = 0;
     float turnning_vel_scale = 0;

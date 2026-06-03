@@ -1,11 +1,14 @@
-joint_ids_map: [0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, 12, 13, 14, 15]
+joint_names: [fl_hipx_joint, fl_hipy_joint, fl_knee_joint, fl_wheel_joint, fr_hipx_joint,
+  fr_hipy_joint, fr_knee_joint, fr_wheel_joint, hl_hipx_joint, hl_hipy_joint, hl_knee_joint,
+  hl_wheel_joint, hr_hipx_joint, hr_hipy_joint, hr_knee_joint, hr_wheel_joint]
+joint_ids_map: [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 3, 7, 11, 15]
 step_dt: 0.02
-stiffness: [80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0,
-  0.0, 0.0, 0.0, 0.0]
-damping: [2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 0.6, 0.6, 0.6,
+stiffness: [80.0, 80.0, 80.0, 0.0, 80.0, 80.0, 80.0, 0.0, 80.0, 80.0, 80.0, 0.0,
+  80.0, 80.0, 80.0, 0.0]
+damping: [2.0, 2.0, 2.0, 0.6, 2.0, 2.0, 2.0, 0.6, 2.0, 2.0, 2.0, 0.6, 2.0, 2.0, 2.0,
   0.6]
-default_joint_pos: [0.0, -0.6, 1.0, 0.0, -0.6, 1.0, 0.0, 0.6, -1.0, 0.0, 0.6, -1.0,
-  0.0, 0.0, 0.0, 0.0]
+default_joint_pos: [0.0, -0.6, 1.0, 0.0, 0.0, -0.6, 1.0, 0.0, 0.0, 0.6, -1.0, 0.0,
+  0.0, 0.6, -1.0, 0.0]
 commands:
   base_velocity:
     ranges:

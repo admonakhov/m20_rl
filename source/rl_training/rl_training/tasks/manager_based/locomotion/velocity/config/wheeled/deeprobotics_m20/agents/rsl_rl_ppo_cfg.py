@@ -55,3 +55,8 @@ class DeeproboticsM20WheeliePPORunnerCfg(DeeproboticsM20FlatPPORunnerCfg):
 
         self.max_iterations = 50000
         self.experiment_name = "deeprobotics_m20_wheelie"
+        self.num_steps_per_env = 32
+        self.policy.init_noise_std = 0.75
+        self.algorithm.entropy_coef = 0.005
+        self.algorithm.learning_rate = 5.0e-4
+        self.algorithm.desired_kl = 0.02

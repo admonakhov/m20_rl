@@ -29,6 +29,8 @@ private:
 
     struct DeployConfig {
         std::filesystem::path path;
+        std::vector<std::string> joint_names;
+        std::vector<int> joint_ids_map;
         std::vector<std::string> policy_order;
         std::vector<float> action_scale;
         std::vector<float> default_joint_pos;
@@ -302,6 +304,21 @@ private:
         return values;
     }
 
+    static std::vector<int> LoadIntSequence(const YAML::Node& node) {
+        std::vector<int> values;
+        if (!node) {
+            return values;
+        }
+        if (!node.IsSequence()) {
+            throw std::runtime_error("Expected an integer sequence in deploy.yaml.");
+        }
+        values.reserve(node.size());
+        for (const auto& value : node) {
+            values.push_back(value.as<int>());
+        }
+        return values;
+    }
+
     static std::vector<std::string> LoadStringSequence(const YAML::Node& node) {
         std::vector<std::string> values;
         if (!node) {
@@ -376,8 +393,13 @@ private:
         cfg.path = deploy_path;
         cfg.step_dt = root["step_dt"] ? root["step_dt"].as<float>() : 0.02f;
 
-        if (root["commands"] && root["commands"]["base_velocity"] && root["commands"]["base_velocity"]["ranges"]) {
-            const YAML::Node ranges = root["commands"]["base_velocity"]["ranges"];
+        const YAML::Node command_ranges =
+            root["commands"] && root["commands"]["base_velocity"] && root["commands"]["base_velocity"]["ranges"]
+                ? root["commands"]["base_velocity"]["ranges"]
+                : YAML::Node();
+
+        if (command_ranges) {
+            const YAML::Node ranges = command_ranges;
             auto max_abs = [](const YAML::Node& range_node, float fallback) {
                 if (!range_node || !range_node.IsSequence() || range_node.size() != 2) {
                     return fallback;
@@ -403,17 +425,37 @@ private:
         cfg.policy_order.insert(cfg.policy_order.end(), vel_joint_names.begin(), vel_joint_names.end());
         cfg.action_scale = pos_scale;
         cfg.action_scale.insert(cfg.action_scale.end(), vel_scale.begin(), vel_scale.end());
+        cfg.joint_names = LoadStringSequence(root["joint_names"]);
+        cfg.joint_ids_map = LoadIntSequence(root["joint_ids_map"]);
 
         cfg.default_joint_pos = LoadFloatSequence(root["default_joint_pos"]);
         cfg.stiffness = LoadFloatSequence(root["stiffness"]);
         cfg.damping = LoadFloatSequence(root["damping"]);
 
         const std::size_t action_dim = cfg.policy_order.size();
+        const std::size_t joint_cfg_dim = cfg.default_joint_pos.size();
         if (cfg.action_scale.size() != action_dim ||
-            cfg.default_joint_pos.size() != action_dim ||
-            cfg.stiffness.size() != action_dim ||
-            cfg.damping.size() != action_dim) {
-            throw std::runtime_error("Action-related vectors in deploy.yaml must match policy action order.");
+            cfg.stiffness.size() != joint_cfg_dim ||
+            cfg.damping.size() != joint_cfg_dim) {
+            throw std::runtime_error("Top-level joint vectors in deploy.yaml must have the same size.");
+        }
+        if (cfg.joint_ids_map.empty()) {
+            cfg.joint_ids_map.resize(action_dim);
+            std::iota(cfg.joint_ids_map.begin(), cfg.joint_ids_map.end(), 0);
+        }
+        if (cfg.joint_ids_map.size() != action_dim) {
+            throw std::runtime_error("joint_ids_map in deploy.yaml must match policy action order.");
+        }
+        for (const int joint_cfg_id : cfg.joint_ids_map) {
+            if (joint_cfg_id < 0 || joint_cfg_id >= static_cast<int>(joint_cfg_dim)) {
+                throw std::runtime_error("joint_ids_map in deploy.yaml contains an out-of-range index.");
+            }
+        }
+        if (!cfg.joint_names.empty() && cfg.joint_names.size() != joint_cfg_dim) {
+            throw std::runtime_error("joint_names in deploy.yaml must match top-level joint vector size.");
+        }
+        if (joint_cfg_dim < action_dim) {
+            throw std::runtime_error("Top-level joint vectors in deploy.yaml are smaller than the policy action order.");
         }
 
         if (!root["observations"]) {
@@ -450,14 +492,15 @@ private:
 
         for (int i = 0; i < action_dim_; ++i) {
             const int robot_joint_id = policy_to_robot_joint_ids_.at(i);
+            const int joint_cfg_id = cfg.joint_ids_map.at(i);
             action_scale_policy_(i) = cfg.action_scale.at(i);
-            default_joint_pos_policy_(i) = cfg.default_joint_pos.at(i);
-            kp_policy_(i) = cfg.stiffness.at(i);
-            kd_policy_(i) = cfg.damping.at(i);
+            default_joint_pos_policy_(i) = cfg.default_joint_pos.at(joint_cfg_id);
+            kp_policy_(i) = cfg.stiffness.at(joint_cfg_id);
+            kd_policy_(i) = cfg.damping.at(joint_cfg_id);
 
-            default_joint_pos_robot_(robot_joint_id) = cfg.default_joint_pos.at(i);
-            kp_robot_(robot_joint_id) = cfg.stiffness.at(i);
-            kd_robot_(robot_joint_id) = cfg.damping.at(i);
+            default_joint_pos_robot_(robot_joint_id) = cfg.default_joint_pos.at(joint_cfg_id);
+            kp_robot_(robot_joint_id) = cfg.stiffness.at(joint_cfg_id);
+            kd_robot_(robot_joint_id) = cfg.damping.at(joint_cfg_id);
         }
 
         observation_dim_ = 0;
@@ -478,9 +521,9 @@ private:
 
     void UpdateCommandInput(const UserCommand& user_cmd) {
         Vec3f desired_cmd;
-        desired_cmd << user_cmd.forward_vel_scale * max_cmd_vel_(0),
-                       user_cmd.side_vel_scale * max_cmd_vel_(1),
-                       user_cmd.turnning_vel_scale * max_cmd_vel_(2);
+        desired_cmd << user_cmd.forward_vel_scale,
+                       user_cmd.side_vel_scale,
+                       user_cmd.turnning_vel_scale;
 
         for (int i = 0; i < 3; ++i) {
             const float delta = desired_cmd(i) - cmd_vel_input_(i);
