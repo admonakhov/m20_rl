@@ -54,7 +54,8 @@ class DeeproboticsM20WheelieEnvCfg(DeeproboticsM20FlatEnvCfg):
 
     def __post_init__(self):
         super().__post_init__()
-
+        self.events.randomize_rigid_body_material.params["static_friction_range"] = [0.15, 1.5]
+        self.events.randomize_rigid_body_material.params["dynamic_friction_range"] = [0.10, 1.2]
         # ------------------------------Robot pose------------------------------
         self.leg_joint_names = self.front_leg_joint_names + self.rear_leg_joint_names
         self.wheel_joint_names = self.front_wheel_joint_names + self.rear_wheel_joint_names
